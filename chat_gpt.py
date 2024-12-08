@@ -5,15 +5,23 @@ import os
 app = Flask(__name__)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({"status": "OK"}), 200
+
 @app.route('/')
 def home():
     return "ChatGPT API is running. Access the `/chat` endpoint to send requests."
 
-@app.route('/chat', methods=['POST'])
+@app.route('/chat', methods=['POST', 'GET'])
 def chat():
+    if request.method == 'GET':
+        return jsonify({"message": "This endpoint only supports POST requests."}), 405  # Method Not Allowed
+    
+    # Handle POST request
     data = request.json
     prompt = data.get("prompt", "")
-    if not prompt: 
+    if not prompt:
         return jsonify({"error": "No prompt provided"}), 400
     try:
         response = client.chat.completions.create(
@@ -24,6 +32,10 @@ def chat():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+@app.before_request
+def log_request_info():
+    print(f"Request Method: {request.method}, Endpoint: {request.path}")
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))  # Use PORT from Render or fallback to 5000
