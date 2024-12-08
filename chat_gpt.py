@@ -13,7 +13,7 @@ def home():
 def chat():
     data = request.json
     prompt = data.get("prompt", "")
-    if not prompt:
+    if not prompt: 
         return jsonify({"error": "No prompt provided"}), 400
     try:
         response = client.chat.completions.create(
