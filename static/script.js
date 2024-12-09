@@ -4,7 +4,8 @@ const sendButton = document.getElementById("send-button");
 
 const appendMessage = (sender, message) => {
     const messageDiv = document.createElement("div");
-    messageDiv.textContent = `${sender}: ${message}`;
+    messageDiv.classList.add("message", sender === "You" ? "user" : "bot");
+    messageDiv.textContent = message;
     chatbox.appendChild(messageDiv);
     chatbox.scrollTop = chatbox.scrollHeight; // Auto-scroll to the bottom
 };
@@ -15,7 +16,6 @@ const fetchChatResponse = async (message) => {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": "Bearer YOUR_API_SECRET_KEY" // Add the correct API key here
             },
             body: JSON.stringify({ prompt: message }),
         });
@@ -24,7 +24,6 @@ const fetchChatResponse = async (message) => {
             throw new Error(`HTTP Error: ${response.status}`);
         }
         const data = await response.json();
-        console.log("API Response:", data);
         return data.response;
     } catch (error) {
         console.error("Error fetching chat response:", error);
