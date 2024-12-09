@@ -5,9 +5,6 @@ import os
 app = Flask(__name__)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Define assistant ID
-assistant_id = "asst_oLLZnPCn5tRCcRANB2Il93KB"
-
 @app.route('/health', methods=['GET'])
 def health_check():
     return jsonify({"status": "OK"}), 200
@@ -40,11 +37,12 @@ def chat():
         return jsonify({"error": "No prompt provided"}), 400
     
     try:
-        # Use the assistant ID for chat completion
+        # Use the Chat Completions API
         response = client.chat.completions.create(
             model="gpt-4",
-            assistant_id=assistant_id,
-            messages=[{"role": "user", "content": prompt}]
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
         )
         return jsonify({"response": response.choices[0].message.content})
     except Exception as e:
