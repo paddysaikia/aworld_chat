@@ -11,7 +11,7 @@ def health_check():
 
 @app.route('/')
 def home():
-    return "ChatGPT API is running. Access the `/chat` endpoint to send requests."
+    return render_template('index.html')
 
 @app.route('/chat', methods=['POST', 'GET'])
 def chat():
