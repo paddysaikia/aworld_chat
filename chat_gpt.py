@@ -41,7 +41,7 @@ def chat():
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}]
         )
-        return jsonify({"response": response.choices[0].message["content"]})
+        return jsonify({"response": response.choices[0].message.content})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
