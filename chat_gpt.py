@@ -3,6 +3,8 @@ from openai import OpenAI
 import os
 
 app = Flask(__name__)
+
+# Initialize OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Step 1: Create an Assistant
@@ -14,11 +16,9 @@ assistant = client.beta.assistants.create(
 assistant_id = assistant.id
 print(f"Assistant created with ID: {assistant_id}")
 
-
 # Step 2: Create a Thread
 thread = client.beta.threads.create(
-    assistant_id=assistant_id,
-    title="Initial Conversation"
+    title="Initial Conversation"  # Optional title
 )
 thread_id = thread.id
 print(f"Thread created with ID: {thread_id}")
@@ -34,7 +34,7 @@ print(f"User message added: {message.content}")
 # Step 4: Generate a Run to Get Assistant Response
 run = client.beta.threads.runs.create(
     thread_id=thread_id,
-    assistant_id=assistant_id
+    assistant_id=assistant_id  # This connects the thread with the assistant
 )
 print(f"Assistant response: {run.message.content}")
 
