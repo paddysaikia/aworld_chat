@@ -48,7 +48,9 @@ def chat():
         )
         return jsonify({"response": response.choices[0].message.content})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        app.logger.error(f"Chat endpoint failed: {e}")
+        return jsonify({"error": "Internal server error occurred"}), 500
+
 
 @app.before_request
 def log_request_info():
