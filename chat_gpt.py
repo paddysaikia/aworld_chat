@@ -4,7 +4,7 @@ import os
 
 app = Flask(__name__)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-knowledge_data = file.read(os.path.join(os.path.dirname(__file__), 'resources', 'knowledge.txt'))
+knowledge_data = open(os.path.join(os.path.dirname(__file__), 'resources', 'knowledge.txt'), 'r', encoding='utf-8').read()
 @app.route('/health', methods=['GET'])
 def health_check():
     return jsonify({"status": "OK"}), 200
