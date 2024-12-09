@@ -15,11 +15,16 @@ const fetchChatResponse = async (message) => {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
+                "Authorization": "Bearer YOUR_API_SECRET_KEY" // Add the correct API key here
             },
             body: JSON.stringify({ prompt: message }),
         });
-        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+        if (!response.ok) {
+            console.error(`Error: ${response.status} ${response.statusText}`);
+            throw new Error(`HTTP Error: ${response.status}`);
+        }
         const data = await response.json();
+        console.log("API Response:", data);
         return data.response;
     } catch (error) {
         console.error("Error fetching chat response:", error);
