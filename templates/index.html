@@ -19,24 +19,6 @@
             padding: 10px;
             border-bottom: 1px solid #ccc;
         }
-        .message {
-            margin: 5px 0;
-            padding: 10px;
-            border-radius: 10px;
-            max-width: 70%;
-        }
-        .you {
-            align-self: flex-end;
-            background-color: #007BFF;
-            color: white;
-            text-align: left;
-        }
-        .aworld {
-            align-self: flex-start;
-            background-color: #f1f1f1;
-            color: black;
-            text-align: right;
-        }
         #input-container {
             display: flex;
             border-top: 1px solid #ccc;
@@ -57,7 +39,7 @@
     </style>
 </head>
 <body>
-    <div id="chatbox" style="display: flex; flex-direction: column;"></div>
+    <div id="chatbox"></div>
     <div id="input-container">
         <input type="text" id="user-input" placeholder="Type your message...">
         <button id="send-button">Send</button>
@@ -69,13 +51,7 @@
 
         const appendMessage = (sender, message) => {
             const messageDiv = document.createElement("div");
-            messageDiv.textContent = message;
-            messageDiv.classList.add("message");
-            if (sender === "You") {
-                messageDiv.classList.add("you");
-            } else {
-                messageDiv.classList.add("aworld");
-            }
+            messageDiv.textContent = `${sender}: ${message}`;
             chatbox.appendChild(messageDiv);
             chatbox.scrollTop = chatbox.scrollHeight;
         };
