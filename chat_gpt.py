@@ -42,7 +42,7 @@ def chat():
     try:
         # Use the assistant ID for chat completion
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4",
             assistant_id=assistant_id,
             messages=[{"role": "user", "content": prompt}]
         )
