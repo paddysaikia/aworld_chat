@@ -3,40 +3,7 @@ from openai import OpenAI
 import os
 
 app = Flask(__name__)
-
-# Initialize OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-# Step 1: Create an Assistant
-assistant = client.beta.assistants.create(
-    name="My Assistant",
-    instructions="You are a helpful assistant that provides detailed responses.",
-    model="gpt-4-1106-preview"
-)
-assistant_id = assistant.id
-print(f"Assistant created with ID: {assistant_id}")
-
-# Step 2: Create a Thread
-thread = client.beta.threads.create(
-    title="Initial Conversation"  # Optional title
-)
-thread_id = thread.id
-print(f"Thread created with ID: {thread_id}")
-
-# Step 3: Add a User Message to the Thread
-message = client.beta.threads.messages.create(
-    thread_id=thread_id,
-    role="user",
-    content="What can you do for me?"
-)
-print(f"User message added: {message.content}")
-
-# Step 4: Generate a Run to Get Assistant Response
-run = client.beta.threads.runs.create(
-    thread_id=thread_id,
-    assistant_id=assistant_id  # This connects the thread with the assistant
-)
-print(f"Assistant response: {run.message.content}")
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -50,7 +17,7 @@ def home():
 def chat():
     if request.method == 'GET':
         return jsonify({"message": "This endpoint only supports POST requests."}), 405  # Method Not Allowed
-
+    
     # Validate headers
     auth_header = request.headers.get("Authorization")
     content_type = request.headers.get("Content-Type")
@@ -68,37 +35,15 @@ def chat():
     prompt = data.get("prompt", "")
     if not prompt:
         return jsonify({"error": "No prompt provided"}), 400
-
+    
     try:
-        # Step 2: Create a Thread
-        thread = client.beta.threads.create(
-            assistant_id=assistant_id,
-            title="Conversation with User"
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}]
         )
-        thread_id = thread.id
-        print(f"Thread created with ID: {thread_id}")
-
-        # Step 3: Add a User Message to the Thread
-        message = client.beta.threads.messages.create(
-            thread_id=thread_id,
-            role="user",
-            content=prompt
-        )
-        print(f"User message added: {message.content}")
-
-        # Step 4: Generate a Run to Get Assistant Response
-        run = client.beta.threads.runs.create(
-            thread_id=thread_id,
-            assistant_id=assistant_id
-        )
-        assistant_response = run.message.content
-        print(f"Assistant response: {assistant_response}")
-
-        return jsonify({"response": assistant_response})
+        return jsonify({"response": response.choices[0].message.content})
     except Exception as e:
-        app.logger.error(f"Chat endpoint failed: {e}")
-        return jsonify({"error": "Internal server error occurred"}), 500
-
+        return jsonify({"error": str(e)}), 500
 
 
 @app.before_request
