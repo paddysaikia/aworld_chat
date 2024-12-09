@@ -18,11 +18,24 @@ def chat():
     if request.method == 'GET':
         return jsonify({"message": "This endpoint only supports POST requests."}), 405  # Method Not Allowed
     
+    # Validate headers
+    auth_header = request.headers.get("Authorization")
+    content_type = request.headers.get("Content-Type")
+    
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return jsonify({"error": "Authorization header missing or invalid"}), 401
+    if content_type != "application/json":
+        return jsonify({"error": "Content-Type must be application/json"}), 400
+
     # Handle POST request
     data = request.json
+    if not data:
+        return jsonify({"error": "Request body must be JSON"}), 400
+
     prompt = data.get("prompt", "")
     if not prompt:
         return jsonify({"error": "No prompt provided"}), 400
+    
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
