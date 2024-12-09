@@ -6,7 +6,7 @@ body {
     display: flex;
     flex-direction: column;
     height: 100vh;
-    background-color: #f4f4f4;
+    background-color: #f9f9f9;
     color: #333;
 }
 
@@ -17,21 +17,33 @@ body {
     padding: 1rem;
     border-bottom: 1px solid #ccc;
     background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem; /* Spacing between messages */
+}
+
+.message {
+    max-width: 70%; /* Limit message width */
+    padding: 0.5rem 1rem;
+    border-radius: 15px;
     word-wrap: break-word;
+    line-height: 1.5;
 }
 
-#chatbox div {
-    margin: 0.5rem 0;
-    padding: 0.5rem;
-    border-radius: 4px;
+/* User Message */
+.message.user {
+    align-self: flex-end;
+    background-color: #007BFF;
+    color: white;
+    text-align: left;
 }
 
-#chatbox div:nth-child(odd) {
-    background: #e9f5ff;
-}
-
-#chatbox div:nth-child(even) {
-    background: #dfffe0;
+/* A WORLD Message */
+.message.bot {
+    align-self: flex-start;
+    background-color: #dfffe0;
+    color: #333;
+    text-align: left;
 }
 
 /* Input Container Styling */
