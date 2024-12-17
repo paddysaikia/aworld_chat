@@ -41,7 +41,7 @@ body {
 /* A WORLD Message */
 .message.bot {
     align-self: flex-start;
-    background-color: #cc0033;
+    background-color: #ad0000;
     color: #ffffff;
     text-align: left;
 }
