@@ -16,7 +16,7 @@ body {
     overflow-y: auto;
     padding: 1rem;
     border-bottom: 1px solid #ccc;
-    background: #ffffff;
+    background: #212121;
     display: flex;
     flex-direction: column;
     gap: 0.5rem; /* Spacing between messages */
