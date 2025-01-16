@@ -4,6 +4,10 @@ import os
 
 app = Flask(__name__)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+knowledge_data = open(os.path.join(os.path.dirname(__file__), 'resources', 'knowledge.txt'), 'r', encoding='utf-8').read()
+
+# Introductory message from Ava
+AVA_INTRO_MESSAGE = "Hello! I'm Ava, here to support you in exploring 'A World.' How can I assist you today?"
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -16,9 +20,10 @@ def home():
 @app.route('/chat', methods=['POST', 'GET'])
 def chat():
     if request.method == 'GET':
-        return jsonify({"message": "This endpoint only supports POST requests."}), 405  # Method Not Allowed
+        # Provide the introductory message when the session starts (GET request)
+        return jsonify({"message": AVA_INTRO_MESSAGE}), 200
     
-    # Validate headers
+    # Handle POST request
     auth_header = request.headers.get("Authorization")
     content_type = request.headers.get("Content-Type")
     
@@ -27,24 +32,24 @@ def chat():
     if content_type != "application/json":
         return jsonify({"error": "Content-Type must be application/json"}), 400
 
-    # Handle POST request
     data = request.json
     if not data:
         return jsonify({"error": "Request body must be JSON"}), 400
 
     prompt = data.get("prompt", "")
     if not prompt:
-        return jsonify({"error": "No prompt provided"}), 400
-    
+        return jsonify({"response": "Please provide a prompt to start the conversation."})
+
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}]
+            messages=[
+                {'role': 'system', 'content': knowledge_data },
+                {"role": "user", "content": prompt}]
         )
         return jsonify({"response": response.choices[0].message.content})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 @app.before_request
 def log_request_info():

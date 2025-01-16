@@ -16,7 +16,7 @@ body {
     overflow-y: auto;
     padding: 1rem;
     border-bottom: 1px solid #ccc;
-    background: #ffffff;
+    background: #212121;
     display: flex;
     flex-direction: column;
     gap: 0.5rem; /* Spacing between messages */
@@ -33,16 +33,16 @@ body {
 /* User Message */
 .message.user {
     align-self: flex-end;
-    background-color: #007BFF;
-    color: white;
+    background-color: #aeaeae;
+    color: #000000;
     text-align: left;
 }
 
 /* A WORLD Message */
 .message.bot {
     align-self: flex-start;
-    background-color: #dfffe0;
-    color: #333;
+    background-color: #cc0033; /* Updated color */
+    color: #ffffff;
     text-align: left;
 }
 
