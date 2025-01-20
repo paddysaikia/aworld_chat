@@ -46,10 +46,10 @@ def chat():
     user_profile = data.get("user_profile", "")
     user_last_chat_history = data.get("user_last_chat_history", "")
 
-    prompt = f"User with the name '{aname}' has query '{query}'. 
+    prompt = f"""User with the name '{aname}' has query '{query}'. 
     This is his user profile : '{user_profile}'. 
     This last converstions are: '{user_last_chat_history}'. 
-    Respond to with the appropriate answer."
+    Respond to with the appropriate answer."""
 
     try:
         response = client.chat.completions.create(
