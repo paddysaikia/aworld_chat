@@ -1,7 +1,10 @@
 from flask import Flask, request, jsonify, render_template
 from openai import OpenAI
 import os
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
 app = Flask(__name__)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 knowledge_data = open(os.path.join(os.path.dirname(__file__), 'resources', 'knowledge.txt'), 'r', encoding='utf-8').read()
@@ -36,9 +39,17 @@ def chat():
     if not data:
         return jsonify({"error": "Request body must be JSON"}), 400
 
-    prompt = data.get("prompt", "")
-    if not prompt:
+    query = data.get("query", "")
+    if not query:
         return jsonify({"response": "Please provide a prompt to start the conversation."})
+    aname = data.get("aname", "")
+    user_profile = data.get("user_profile", "")
+    user_last_chat_history = data.get("user_last_chat_history", "")
+
+    prompt = f"User with the name '{aname}' has query '{query}'. 
+    This is his user profile : '{user_profile}'. 
+    This last converstions are: '{user_last_chat_history}'. 
+    Respond to with the appropriate answer."
 
     try:
         response = client.chat.completions.create(
