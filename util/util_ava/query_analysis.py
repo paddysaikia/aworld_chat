@@ -1,4 +1,6 @@
 import os
+import logging
+
 class QueryAnalyzer:
     def __init__(self, ai_interface):
         """
@@ -7,11 +9,17 @@ class QueryAnalyzer:
         :param ai_interface: Interface for AI interactions
         """
         self.ai_interface = ai_interface
-        base_path = os.path.join(
-            os.path.dirname(__file__), '..', 'resources', 'data', 'ava', 'knowledge', 'aworld'
-        )
-        print(f"Base path set to: {base_path}")
 
+        # Normalize base path
+        base_path = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), '..', 'resources', 'data', 'ava', 'knowledge', 'aworld')
+        )
+        logging.basicConfig(level=logging.INFO)
+        self.logger = logging.getLogger(__name__)
+
+        self.logger.info(f"Base path set to: {base_path}")
+
+        # Define tasks
         self.tasks = {
             1: "Analyze Query Intent",
             2: "Check Relevance to A World",
@@ -33,6 +41,7 @@ class QueryAnalyzer:
             18: "Feedback Loop",
         }
 
+        # Define knowledge base paths
         self.knowledge_base = {
             "01_Vision_and_Mission": os.path.join(base_path, "01_Vision_and_Mission.txt"),
             "02_Core_Principles": os.path.join(base_path, "02_Core_Principles.txt"),
@@ -46,15 +55,30 @@ class QueryAnalyzer:
             "10_Broader_Context_Beyond_A_World": os.path.join(base_path, "10_Broader_Context_Beyond_A_World.txt"),
         }
 
-        # Debugging: Check for missing files in the knowledge base
+        # Load knowledge base files into memory
+        self.knowledge_data = {}
         for file_key, file_path in self.knowledge_base.items():
-            if not os.path.exists(file_path):
-                print(f"Warning: Knowledge base file not found - {file_key}: {file_path}")
+            normalized_path = os.path.abspath(file_path)
+            if os.path.exists(normalized_path):
+                with open(normalized_path, 'r', encoding='utf-8') as f:
+                    self.knowledge_data[file_key] = f.read()
+            else:
+                self.logger.warning(f"Knowledge base file not found - {file_key}: {normalized_path}")
+                self.knowledge_data[file_key] = None  # Optional fallback
 
+        # Raise error if critical files are missing
+        mandatory_files = ["01_Vision_and_Mission", "02_Core_Principles"]
+        for file_key in mandatory_files:
+            if not self.knowledge_data.get(file_key):
+                raise FileNotFoundError(f"Critical knowledge base file missing: {file_key}")
+
+        # Initialize inputs
         self.inputs = {
             "last_conversations": "",
             "user_profile": "",
         }
+
+
 
     def analyze_query(self, user_name, query, last_n_conversations, user_profile):
         # Step 1: Prepare initial payload
