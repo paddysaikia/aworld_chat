@@ -11,7 +11,7 @@ class QueryAnalyzer:
         self.ai_interface = ai_interface
 
         # Get project root and resolve base path
-        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
         base_path = os.path.join(project_root, 'resources', 'data', 'ava', 'knowledge', 'aworld')
 
         logging.basicConfig(level=logging.INFO)
