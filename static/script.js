@@ -19,26 +19,31 @@ window.addEventListener("DOMContentLoaded", () => {
 // Fetch chat response from the server
 const fetchChatResponse = async (message) => {
     try {
-        const response = await fetch("https://aworld-chat.onrender.com/chat", {
+        console.log("Fetching chat response with message:", message);
+
+        const response = await fetch("/chat", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": "Bearer YOUR_API_SECRET_KEY" // Add the correct API key here
             },
             body: JSON.stringify({ prompt: message }),
         });
+
         if (!response.ok) {
             console.error(`Error: ${response.status} ${response.statusText}`);
             throw new Error(`HTTP Error: ${response.status}`);
         }
+
         const data = await response.json();
-        console.log("API Response:", data);
-        return data.response;
+        console.log("Parsed API Response:", data);
+        return data.choices[0].message.content; // Update this path based on your response structure
     } catch (error) {
         console.error("Error fetching chat response:", error);
         return "Sorry, something went wrong. Please try again later.";
     }
 };
+
+
 
 // Handle send button click
 sendButton.addEventListener("click", async () => {
