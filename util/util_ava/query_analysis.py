@@ -10,13 +10,13 @@ class QueryAnalyzer:
         """
         self.ai_interface = ai_interface
 
-        # Normalize base path
-        base_path = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), '..', 'resources', 'data', 'ava', 'knowledge', 'aworld')
-        )
+        # Get project root and resolve base path
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+        base_path = os.path.join(project_root, 'resources', 'data', 'ava', 'knowledge', 'aworld')
+
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
-
+        self.logger.info(f"Project root: {project_root}")
         self.logger.info(f"Base path set to: {base_path}")
 
         # Define tasks
