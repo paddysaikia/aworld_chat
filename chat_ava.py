@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, render_template
 import os
 from dotenv import load_dotenv
-
+from openai import OpenAI
 from middleware.interface import chat_gpt
 
 from util.util_ava.query_analysis import QueryAnalyzer
@@ -29,6 +29,45 @@ def health_check():
 @app.route('/')
 def home():
     return render_template('index.html')
+
+
+@app.route('/chat_guest', methods=['POST'])
+def chat_guest():
+    if request.method == 'GET':
+        # Provide the introductory message when the session starts (GET request)
+        return jsonify({"message": AVA_INTRO_MESSAGE}), 200
+    
+    # Handle POST request
+    auth_header = request.headers.get("Authorization")
+    content_type = request.headers.get("Content-Type")
+    
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return jsonify({"error": "Authorization header missing or invalid"}), 401
+    if content_type != "application/json":
+        return jsonify({"error": "Content-Type must be application/json"}), 400
+
+    data = request.json
+    if not data:
+        return jsonify({"error": "Request body must be JSON"}), 400
+
+    prompt = data.get("prompt", "")
+    if not prompt:
+        return jsonify({"response": "Please provide a prompt to start the conversation."})
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("API key for OpenAI is missing. Set the OPENAI_API_KEY environment variable.")
+    client = OpenAI(api_key=api_key)
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {'role': 'system', 'content': knowledge_data },
+                {"role": "user", "content": prompt}]
+        )
+        return jsonify({"response": response.choices[0].message.content})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route('/chat', methods=['POST'])
 def chat():
