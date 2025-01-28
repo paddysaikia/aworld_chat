@@ -1,5 +1,5 @@
 import json
-from middleware.interface.chatgpt import ChatGPTClient
+from middleware.interface.chat_gpt import ChatGPTClient
 
 class AIInterface:
     def __init__(self):

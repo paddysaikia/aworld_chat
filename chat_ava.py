@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, render_template
 import os
 from dotenv import load_dotenv
 
-from middleware.interface import chatgpt
+from middleware.interface import chat_gpt
 
 from util.util_ava.query_analysis import QueryAnalyzer
 from util.util_ava.util_interface import AIInterface
