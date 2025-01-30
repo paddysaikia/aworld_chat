@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, render_template
 import os
 import requests
+import logging
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -120,6 +121,27 @@ def chat():
         response.raise_for_status()
         return jsonify(response.json())
     except requests.exceptions.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/update_user_profile', methods=['POST'])
+def update_user_profile():
+    data = request.json
+    if not data or 'query' not in data or 'user_profile' not in data:
+        return jsonify({"error": "Missing query or user_profile"}), 400
+
+    try:
+        query = data['query']
+        user_profile = data['user_profile']
+
+        # Initialize AIInterface
+        ai_interface = AIInterface()
+
+        # Call the method to update user profile
+        updated_profile = ai_interface.update_user_profile(query, user_profile)
+
+        return jsonify({"user_profile": updated_profile}), 200
+    except Exception as e:
+        logging.error(f"Error in /update_user_profile endpoint: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.before_request
