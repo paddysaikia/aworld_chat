@@ -94,12 +94,12 @@ class AIInterface:
         Updates the user profile based on relevant information extracted from the query.
 
         :param query: The user's query containing potential profile updates.
-        :param user_profile: The current user profile data.
-        :return: Updated user profile if relevant information is found, otherwise the original profile.
+        :param user_profile: The current user profile data in JSON string format.
+        :return: Updated user profile as a JSON string.
         """
-        import json
+
         try:
-            # Ensure user_profile is a dictionary
+            # Convert user_profile from JSON string to dictionary
             if isinstance(user_profile, str):
                 user_profile = json.loads(user_profile)
 
@@ -110,7 +110,7 @@ class AIInterface:
                 "for each new relevant detail. If no new relevant details are found, return an empty JSON object."
             )
 
-            # Convert user_profile to string for comparison
+            # Convert user_profile to string for AI processing
             user_profile_str = json.dumps(user_profile, ensure_ascii=False)
 
             # Use ChatGPTClient to analyze query for new profile updates
@@ -123,7 +123,8 @@ class AIInterface:
             if isinstance(extracted_info, dict) and extracted_info:
                 user_profile.update(extracted_info)
 
-            return user_profile
+            # Convert updated profile back to JSON string before returning
+            return json.dumps(user_profile, ensure_ascii=False)
 
         except Exception as e:
             logging.error(f"Error updating user profile: {e}")

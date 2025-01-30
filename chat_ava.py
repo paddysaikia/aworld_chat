@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, render_template
 import os
 import requests
 import logging
+import json
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -139,10 +140,14 @@ def update_user_profile():
         # Call the method to update user profile
         updated_profile = ai_interface.update_user_profile(query, user_profile)
 
-        return jsonify({"user_profile": updated_profile}), 200
+        # Convert updated profile back to JSON string before returning
+        updated_profile_str = json.dumps(updated_profile, ensure_ascii=False)
+
+        return jsonify({"updated_user_profile": updated_profile_str}), 200
     except Exception as e:
         logging.error(f"Error in /update_user_profile endpoint: {e}")
         return jsonify({"error": str(e)}), 500
+
 
 @app.before_request
 def log_request_info():
