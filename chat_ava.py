@@ -124,6 +124,7 @@ def chat():
     except requests.exceptions.RequestException as e:
         return jsonify({"error": str(e)}), 500
 
+
 @app.route('/update_user_profile', methods=['POST'])
 def update_user_profile():
     data = request.json
@@ -133,6 +134,10 @@ def update_user_profile():
     try:
         query = data['query']
         user_profile = data['user_profile']
+
+        # Ensure user_profile is a valid JSON string
+        if not user_profile.strip():
+            user_profile = "{}"  # Default to an empty JSON object
 
         # Initialize AIInterface
         ai_interface = AIInterface()

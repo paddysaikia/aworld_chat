@@ -89,6 +89,7 @@ class AIInterface:
         print("Failed to get a valid response in the desired format after 5 attempts.")
         return {"response": "Sorry, I was not able to understand you. Can you try that again?"}
     
+
     def update_user_profile(self, query, user_profile):
         """
         Updates the user profile based on relevant information extracted from the query.
@@ -97,17 +98,17 @@ class AIInterface:
         :param user_profile: The current user profile data in JSON string format.
         :return: Updated user profile as a JSON string.
         """
-
+        import json
         try:
             # Convert user_profile from JSON string to dictionary
             if isinstance(user_profile, str):
-                user_profile = json.loads(user_profile)
+                user_profile = json.loads(user_profile) if user_profile.strip() else {}
 
             # Define system prompt to extract relevant new information
             system_prompt = (
                 "Identify relevant personal information in the user's query that is not already in the user profile. "
                 "Provide a simplified summary of this new information. Respond only in JSON format with key-value pairs "
-                "for each new relevant detail. If no new relevant details are found, return an empty JSON object."
+                "for each new relevant detail. If no new relevant details are found, return an empty JSON object {}."
             )
 
             # Convert user_profile to string for AI processing
@@ -116,8 +117,17 @@ class AIInterface:
             # Use ChatGPTClient to analyze query for new profile updates
             extracted_info = self.chat_client.generate_response(system_prompt, f"User Profile: {user_profile_str}\nQuery: {query}")
 
+            # Validate extracted_info before attempting to parse it
+            if not extracted_info.strip():
+                logging.warning("ChatGPT returned an empty response. Returning original user profile.")
+                return json.dumps(user_profile, ensure_ascii=False)
+
             # Parse AI response
-            extracted_info = json.loads(extracted_info)
+            try:
+                extracted_info = json.loads(extracted_info)
+            except json.JSONDecodeError as e:
+                logging.error(f"Error decoding AI response: {e}. Returning original profile.")
+                return json.dumps(user_profile, ensure_ascii=False)
 
             # If new relevant information is found, manually append it to the user profile
             if isinstance(extracted_info, dict) and extracted_info:
@@ -128,7 +138,7 @@ class AIInterface:
 
         except Exception as e:
             logging.error(f"Error updating user profile: {e}")
-            return user_profile  # Return original profile in case of failure
+            return json.dumps(user_profile, ensure_ascii=False)  # Return original profile in case of failure
 
 def clean_response(response):
     """
