@@ -85,29 +85,31 @@ def chat_user():
         return jsonify({"error": "Content-Type must be application/json"}), 400
 
     print("Extracting JSON data from request")
-    data = request.json
+    data = request.get_json(silent=True)
 
-    if not data:
-        print("Request body is not JSON")
-        return jsonify({"error": "Request body must be JSON"}), 400
+    if not isinstance(data, dict):
+        print(f"Invalid JSON format: {data}")
+        return jsonify({"error": "Invalid JSON format, expected a dictionary"}), 400
 
-    print("Validating query parameter")
+    print("Validating parameters")
     query = data.get("query", "").strip()
-    if not query:
-        print("Query parameter missing")
-        return jsonify({"response": "Please provide a query to start."}), 400
-
     aname = data.get("aname", "").strip()
     user_profile = data.get("user_profile", "").strip()
     user_last_chat_history = data.get("user_last_chat_history", "").strip()
 
-    # Fix empty/invalid values
-    if not user_profile or user_profile == "undefined":
-        user_profile = "{}"  # Default to empty JSON string
-    if user_last_chat_history == "undefined":
-        user_last_chat_history = None  # Convert to None
+    # Logging missing parameters
+    if not query:
+        print("⚠️ Warning: 'query' is missing or empty.")
+    if not aname:
+        print("⚠️ Warning: 'aname' is missing or empty.")
+    if not user_profile or user_profile.lower() == "undefined":
+        print("⚠️ Warning: 'user_profile' is missing or invalid, defaulting to '{}'.")
+        user_profile = "{}"
+    if not user_last_chat_history or user_last_chat_history.lower() == "undefined":
+        print("⚠️ Warning: 'user_last_chat_history' is missing or invalid, defaulting to None.")
+        user_last_chat_history = None
 
-    print(f"Query: {query}, Name: {aname}, User Profile: {user_profile}, Last Chat History: {user_last_chat_history}")
+    print(f"Processed Query: {query}, Name: {aname}, User Profile: {user_profile}, Last Chat History: {user_last_chat_history}")
 
     try:
         print("Calling analyze_query method")
@@ -118,9 +120,6 @@ def chat_user():
             user_profile=user_profile
         )
 
-        print("Response from ChatGPTClient:", answer)
-        print("Type of response:", type(answer))
-
         print(f"analyze_query returned: {answer}")
         return jsonify({"response": answer}), 200
     except Exception as e:
@@ -129,35 +128,38 @@ def chat_user():
 
 
 
-
 @app.route('/update_user_profile', methods=['POST'])
 def update_user_profile():
-    data = request.json
-    if not data or 'query' not in data or 'user_profile' not in data:
-        return jsonify({"error": "Missing query or user_profile"}), 400
+    data = request.get_json(silent=True)
+
+    if not isinstance(data, dict):
+        logging.error(f"Invalid JSON format received: {data}")
+        return jsonify({"error": "Invalid JSON format, expected a dictionary"}), 400
+
+    query = data.get("query", "").strip()
+    user_profile = data.get("user_profile", "").strip()
+
+    # Log and handle missing values
+    if not query:
+        logging.warning("⚠️ Warning: 'query' is missing or empty.")
+    if not user_profile or user_profile.lower() == "undefined":
+        logging.warning("⚠️ Warning: 'user_profile' is missing or invalid, defaulting to '{}'.")
+        user_profile = "{}"  # Default to empty JSON object
 
     try:
-        query = data['query'].strip()
-        user_profile = data['user_profile'].strip()
-
-        # Fix empty or undefined user profile
-        if not user_profile or user_profile == "undefined":
-            user_profile = "{}"  # Default to an empty JSON object
-
         ai_interface = AIInterface()
         updated_profile = ai_interface.update_user_profile(query, user_profile)
 
         # Convert updated profile back to JSON string before returning
         updated_profile_str = json.dumps(updated_profile, ensure_ascii=False)
 
-        # Log the updated user profile response
-        logging.info(f"Updated User Profile: {updated_profile_str}")
+        # Log updated user profile
+        logging.info(f"✅ Updated User Profile: {updated_profile_str}")
 
         return jsonify({"updated_user_profile": updated_profile_str}), 200
     except Exception as e:
         logging.error(f"Error in /update_user_profile endpoint: {e}")
         return jsonify({"error": str(e)}), 500
-
 
 
 
