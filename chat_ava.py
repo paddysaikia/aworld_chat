@@ -135,8 +135,6 @@ def chat_user():
         return jsonify({"error": str(e)}), 500
 
 
-
-
 @app.route('/update_user_profile', methods=['POST'])
 def update_user_profile():
     print("Validating headers")
@@ -193,15 +191,35 @@ def update_user_profile():
             logging.warning("⚠️ OpenAI response was empty after 3 attempts. Returning original user profile.")
             updated_profile = json.loads(user_profile)  # Convert user_profile back to dictionary
 
-        # Log final updated user profile
-        logging.info(f"✅ Final Updated User Profile: {json.dumps(updated_profile, ensure_ascii=False)}")
+        # Convert updated profile to text format
+        text_profile = convert_json_to_text(updated_profile)
 
-        return jsonify({"updated_user_profile": updated_profile}), 200
+        # Log final updated user profile
+        logging.info(f"✅ Final Updated User Profile (Text Format): {text_profile}")
+
+        return jsonify({"updated_user_profile": text_profile}), 200
     except Exception as e:
         logging.error(f"Error in /update_user_profile endpoint: {e}")
         return jsonify({"error": str(e)}), 500
 
+def convert_json_to_text(user_profile_json):
+    """
+    Convert a JSON user profile to a text-based format.
+    """
+    try:
+        # Load JSON if it's a string
+        if isinstance(user_profile_json, str):
+            user_profile = json.loads(user_profile_json)
+        else:
+            user_profile = user_profile_json
 
+        # Convert dictionary to a formatted text string
+        text_profile = "\n".join([f"{key.replace('_', ' ').title()}: {value}" for key, value in user_profile.items()])
+
+        return text_profile
+    except Exception as e:
+        logging.error(f"❌ Error converting user profile to text: {e}")
+        return "Error formatting profile."
 
 
 

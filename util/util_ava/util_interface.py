@@ -138,7 +138,9 @@ class AIInterface:
         except Exception as e:
             logging.error(f"Error updating user profile: {e}")
             return json.dumps(user_profile, ensure_ascii=False)  # Return original profile in case of failure
+        
 
+        
 def clean_response(response):
     """
     Cleans the AI response to extract and parse the JSON part.

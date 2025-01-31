@@ -1,5 +1,6 @@
 import os
 import logging
+import json
 
 class QueryAnalyzer:
     def __init__(self, ai_interface):
@@ -169,3 +170,6 @@ class QueryAnalyzer:
         except Exception as e:
             logging.error(f"Error updating user profile: {e}")
             return user_profile  # Return original profile in case of failure
+
+
+
