@@ -135,6 +135,7 @@ def chat_user():
         return jsonify({"error": str(e)}), 500
 
 
+
 @app.route('/update_user_profile', methods=['POST'])
 def update_user_profile():
     print("Validating headers")
@@ -154,70 +155,72 @@ def update_user_profile():
     query = data.get("query", "").strip()
     user_profile = data.get("user_profile", "").strip()
 
+    # Log missing values
     if not query:
         logging.warning("⚠️ Warning: 'query' is missing or empty.")
     if not user_profile or user_profile.lower() == "undefined":
         logging.warning("⚠️ Warning: 'user_profile' is missing or invalid, defaulting to '{}'.")
-        user_profile = "{}"
+        user_profile = "{}"  # Default to empty JSON object
 
     try:
         ai_interface = AIInterface()
+
+        # Retry mechanism for empty responses
         max_retries = 3
         attempt = 0
         updated_profile = None
 
         while attempt < max_retries:
             raw_response = ai_interface.update_user_profile(query, user_profile)
+
+            # Log the raw AI response
             logging.info(f"🧠 Raw AI Response (Attempt {attempt + 1}): {raw_response}")
 
             if isinstance(raw_response, str) and raw_response.strip():
                 try:
-                    updated_profile = json.loads(raw_response)
-                    if updated_profile:
-                        break  
+                    updated_profile = json.loads(raw_response)  # Convert JSON string to a dictionary
+                    if updated_profile:  # Ensure it's not empty
+                        break  # Exit retry loop if response is valid
                 except json.JSONDecodeError:
                     logging.error(f"❌ Error decoding AI response: {raw_response}")
 
             attempt += 1
-            time.sleep(1)
+            time.sleep(1)  # Add delay before retrying
 
         # If OpenAI fails after 3 retries, return the original user profile
         if not updated_profile:
             logging.warning("⚠️ OpenAI response was empty after 3 attempts. Returning original user profile.")
-            updated_profile = json.loads(user_profile)
+            updated_profile = json.loads(user_profile)  # Convert user_profile back to dictionary
 
-        # Convert JSON profile to text
-        profile_text = convert_json_to_text(updated_profile)
+        # Convert the JSON profile to text
+        user_profile_text = convert_json_to_text(updated_profile)
 
-        logging.info(f"✅ Final Updated User Profile:\n{profile_text}")
+        # Log final updated user profile
+        logging.info(f"✅ Final Updated User Profile:\n{user_profile_text}")
 
-        return jsonify({"updated_user_profile": profile_text}), 200
-
+        return jsonify({"updated_user_profile": user_profile_text}), 200
     except Exception as e:
         logging.error(f"Error in /update_user_profile endpoint: {e}")
         return jsonify({"error": str(e)}), 500
 
 
 
-
-def convert_json_to_text(user_profile_dict):
+def convert_json_to_text(user_profile_json):
     """
-    Converts a dictionary user profile into a human-readable text format.
-    
-    :param user_profile_dict: Dictionary representing the user profile
-    :return: Formatted text version of the user profile
+    Converts a user profile JSON dictionary to a human-readable text format.
+    If the JSON is empty or invalid, returns a default message.
     """
     try:
-        if not user_profile_dict or not isinstance(user_profile_dict, dict):
+        if not user_profile_json or not isinstance(user_profile_json, dict):
             logging.warning("⚠️ Warning: Received empty or invalid user profile dictionary. Returning default message.")
             return "User profile is currently empty or unavailable."
-
-        profile_text = "\n".join([f"{key.replace('_', ' ').title()}: {value}" for key, value in user_profile_dict.items()])
-        return profile_text
-
+        
+        return "\n".join([f"{key.capitalize()}: {value}" for key, value in user_profile_json.items()])
+    
     except Exception as e:
-        logging.error(f"❌ Error converting user profile to text: {e}")
+        logging.error(f"❌ Error in convert_json_to_text: {e}")
         return "Error formatting profile."
+
 
 
 
