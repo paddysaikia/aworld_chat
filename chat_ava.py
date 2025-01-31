@@ -34,69 +34,6 @@ def health_check():
 def home():
     return render_template('index.html')
 
-@app.route('/chat_user', methods=['POST'])
-def chat_user():
-    # Initialize AIInterface and QueryAnalyzer
-    print("Initializing AIInterface and QueryAnalyzer")
-    try:
-        ai_interface = AIInterface()
-        query_analyzer = QueryAnalyzer(ai_interface)
-    except Exception as e:
-        print(f"Error during initialization: {e}")
-        return jsonify({"error": f"Initialization error: {str(e)}"}), 500
-
-    # Handle POST request for chat context
-    print("Validating headers")
-    auth_header = request.headers.get("Authorization")
-    content_type = request.headers.get("Content-Type")
-
-    if not auth_header or not auth_header.startswith("Bearer "):
-        print("Authorization header missing or invalid")
-        return jsonify({"error": "Authorization header missing or invalid"}), 401
-    if content_type != "application/json":
-        print("Invalid Content-Type")
-        return jsonify({"error": "Content-Type must be application/json"}), 400
-
-    print("Extracting JSON data from request")
-    data = request.json
-        
-    print("Request JSON:", data)
-    print("Type of data:", type(data))
-
-    if not data:
-        print("Request body is not JSON")
-        return jsonify({"error": "Request body must be JSON"}), 400
-
-    print("Validating query parameter")
-    query = data.get("query", "")
-    if not query:
-        print("Query parameter missing")
-        return jsonify({"response": "Please provide a query to start."}), 400
-
-    aname = data.get("aname", "")
-    user_profile = data.get("user_profile", "")
-    user_last_chat_history = data.get("user_last_chat_history", "")
-
-    print(f"Query: {query}, Name: {aname}, User Profile: {user_profile}, Last Chat History: {user_last_chat_history}")
-
-    # Analyze the query using QueryAnalyzer
-    try:
-        print("Calling analyze_query method")
-        answer = query_analyzer.analyze_query(
-            user_name=aname,
-            query=query,
-            last_n_conversations=user_last_chat_history,
-            user_profile=user_profile
-        )
-        print("Response from ChatGPTClient:", answer)
-        print("Type of response:", type(answer))
-
-        print(f"analyze_query returned: {answer}")
-        return jsonify({"response": answer}), 200
-    except Exception as e:
-        print(f"Error during query analysis: {e}")
-        return jsonify({"error": str(e)}), 500
-
 @app.route('/chat', methods=['POST'])
 def chat():
     api_key = os.getenv("OPENAI_API_KEY")
@@ -125,6 +62,74 @@ def chat():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/chat_user', methods=['POST'])
+def chat_user():
+    print("Initializing AIInterface and QueryAnalyzer")
+
+    try:
+        ai_interface = AIInterface()
+        query_analyzer = QueryAnalyzer(ai_interface)
+    except Exception as e:
+        print(f"Error during initialization: {e}")
+        return jsonify({"error": f"Initialization error: {str(e)}"}), 500
+
+    print("Validating headers")
+    auth_header = request.headers.get("Authorization")
+    content_type = request.headers.get("Content-Type")
+
+    if not auth_header or not auth_header.startswith("Bearer "):
+        print("Authorization header missing or invalid")
+        return jsonify({"error": "Authorization header missing or invalid"}), 401
+    if content_type != "application/json":
+        print("Invalid Content-Type")
+        return jsonify({"error": "Content-Type must be application/json"}), 400
+
+    print("Extracting JSON data from request")
+    data = request.json
+
+    if not data:
+        print("Request body is not JSON")
+        return jsonify({"error": "Request body must be JSON"}), 400
+
+    print("Validating query parameter")
+    query = data.get("query", "").strip()
+    if not query:
+        print("Query parameter missing")
+        return jsonify({"response": "Please provide a query to start."}), 400
+
+    aname = data.get("aname", "").strip()
+    user_profile = data.get("user_profile", "").strip()
+    user_last_chat_history = data.get("user_last_chat_history", "").strip()
+
+    # Fix empty/invalid values
+    if not user_profile or user_profile == "undefined":
+        user_profile = "{}"  # Default to empty JSON string
+    if user_last_chat_history == "undefined":
+        user_last_chat_history = None  # Convert to None
+
+    print(f"Query: {query}, Name: {aname}, User Profile: {user_profile}, Last Chat History: {user_last_chat_history}")
+
+    try:
+        print("Calling analyze_query method")
+        answer = query_analyzer.analyze_query(
+            user_name=aname,
+            query=query,
+            last_n_conversations=user_last_chat_history,
+            user_profile=user_profile
+        )
+
+        print("Response from ChatGPTClient:", answer)
+        print("Type of response:", type(answer))
+
+        print(f"analyze_query returned: {answer}")
+        return jsonify({"response": answer}), 200
+    except Exception as e:
+        print(f"Error during query analysis: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+
+
 @app.route('/update_user_profile', methods=['POST'])
 def update_user_profile():
     data = request.json
@@ -132,26 +137,28 @@ def update_user_profile():
         return jsonify({"error": "Missing query or user_profile"}), 400
 
     try:
-        query = data['query']
-        user_profile = data['user_profile']
+        query = data['query'].strip()
+        user_profile = data['user_profile'].strip()
 
-        # Ensure user_profile is a valid JSON string
-        if not user_profile.strip():
+        # Fix empty or undefined user profile
+        if not user_profile or user_profile == "undefined":
             user_profile = "{}"  # Default to an empty JSON object
 
-        # Initialize AIInterface
         ai_interface = AIInterface()
-
-        # Call the method to update user profile
         updated_profile = ai_interface.update_user_profile(query, user_profile)
 
         # Convert updated profile back to JSON string before returning
         updated_profile_str = json.dumps(updated_profile, ensure_ascii=False)
 
+        # Log the updated user profile response
+        logging.info(f"Updated User Profile: {updated_profile_str}")
+
         return jsonify({"updated_user_profile": updated_profile_str}), 200
     except Exception as e:
         logging.error(f"Error in /update_user_profile endpoint: {e}")
         return jsonify({"error": str(e)}), 500
+
+
 
 
 @app.before_request

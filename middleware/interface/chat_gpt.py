@@ -1,10 +1,10 @@
 from flask import Flask, request, jsonify, render_template
 from openai import OpenAI
 import os
+import time
 
 class ChatGPTClient:
     def __init__(self):
-        # Initialize the OpenAI client with the API key
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise ValueError("API key for OpenAI is missing. Set the OPENAI_API_KEY environment variable.")
@@ -12,16 +12,18 @@ class ChatGPTClient:
         print("OpenAI client initialized successfully.")
 
     def generate_response(self, system_context, prompt):
-        try:
-            # Make the API call
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {'role': 'system', 'content': system_context},
-                    {"role": "user", "content": prompt}
-                ]
-            )
-            return response.choices[0].message.content
-        except Exception as e:
-            print(f"Error in ChatGPTClient: {e}")
-            return {"error": str(e)}
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = self.client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {'role': 'system', 'content': system_context},
+                        {"role": "user", "content": prompt}
+                    ]
+                )
+                return response.choices[0].message.content
+            except Exception as e:
+                logging.error(f"OpenAI API error (attempt {attempt + 1}): {e}")
+                time.sleep(2 ** attempt)  # Exponential backoff
+        return json.dumps({"error": "Failed to get response from OpenAI."})

@@ -89,7 +89,6 @@ class AIInterface:
         print("Failed to get a valid response in the desired format after 5 attempts.")
         return {"response": "Sorry, I was not able to understand you. Can you try that again?"}
     
-
     def update_user_profile(self, query, user_profile):
         """
         Updates the user profile based on relevant information extracted from the query.
