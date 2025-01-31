@@ -215,7 +215,7 @@ def convert_json_to_text(user_profile_json):
             logging.warning("⚠️ Warning: Received empty or invalid user profile dictionary. Returning default message.")
             return "User profile is currently empty or unavailable."
         
-        return "\n".join([f"{key.capitalize()}: {value}" for key, value in user_profile_json.items()])
+        return ",,,".join([f"{key.capitalize()}: {value}" for key, value in user_profile_json.items()])
     
     except Exception as e:
         logging.error(f"❌ Error in convert_json_to_text: {e}")
