@@ -153,14 +153,30 @@ def update_user_profile():
         return jsonify({"error": "Invalid or missing JSON payload"}), 400
 
     query = data.get("query", "").strip()
-    user_profile = data.get("user_profile", "").strip()
+    user_profile_str = data.get("user_profile", "").strip()
 
     # Log missing values
     if not query:
         logging.warning("⚠️ Warning: 'query' is missing or empty.")
-    if not user_profile or user_profile.lower() == "undefined":
+
+    if not user_profile_str or user_profile_str.lower() == "undefined":
         logging.warning("⚠️ Warning: 'user_profile' is missing or invalid, defaulting to '{}'.")
-        user_profile = "{}"  # Default to empty JSON object
+        user_profile_dict = {}  # Default to an empty dictionary
+    else:
+        try:
+            # **Parse the text-based profile into a dictionary**
+            user_profile_dict = {}
+            for entry in user_profile_str.split(","):
+                key_value = entry.split(":", 1)  # Split only at the first ":"
+                if len(key_value) == 2:
+                    key, value = key_value
+                    user_profile_dict[key.strip()] = value.strip()
+
+            logging.info(f"✅ Parsed User Profile: {user_profile_dict}")
+
+        except Exception as e:
+            logging.error(f"❌ Error parsing 'user_profile': {user_profile_str}")
+            user_profile_dict = {}  # Default to an empty dictionary
 
     try:
         ai_interface = AIInterface()
@@ -171,18 +187,20 @@ def update_user_profile():
         updated_profile = None
 
         while attempt < max_retries:
-            raw_response = ai_interface.update_user_profile(query, user_profile)
+            raw_response = ai_interface.update_user_profile(query, json.dumps(user_profile_dict))
 
             # Log the raw AI response
             logging.info(f"🧠 Raw AI Response (Attempt {attempt + 1}): {raw_response}")
 
-            if isinstance(raw_response, str) and raw_response.strip():
+            if raw_response and raw_response.strip():
                 try:
                     updated_profile = json.loads(raw_response)  # Convert JSON string to a dictionary
-                    if updated_profile:  # Ensure it's not empty
+                    if isinstance(updated_profile, dict) and updated_profile:  # Ensure it's valid
                         break  # Exit retry loop if response is valid
-                except json.JSONDecodeError:
+                except json.JSONDecodeError as e:
                     logging.error(f"❌ Error decoding AI response: {raw_response}")
+            else:
+                logging.warning(f"⚠️ OpenAI returned an empty response on attempt {attempt + 1}")
 
             attempt += 1
             time.sleep(1)  # Add delay before retrying
@@ -190,7 +208,7 @@ def update_user_profile():
         # If OpenAI fails after 3 retries, return the original user profile
         if not updated_profile:
             logging.warning("⚠️ OpenAI response was empty after 3 attempts. Returning original user profile.")
-            updated_profile = json.loads(user_profile)  # Convert user_profile back to dictionary
+            updated_profile = user_profile_dict  # Use parsed original profile
 
         # Convert the JSON profile to text
         user_profile_text = convert_json_to_text(updated_profile)
@@ -202,6 +220,7 @@ def update_user_profile():
     except Exception as e:
         logging.error(f"Error in /update_user_profile endpoint: {e}")
         return jsonify({"error": str(e)}), 500
+
 
 
 
