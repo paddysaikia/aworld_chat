@@ -3,6 +3,7 @@ import os
 import requests
 import logging
 import json
+import time
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -81,7 +82,7 @@ def chat_user():
         print("Authorization header missing or invalid")
         return jsonify({"error": "Authorization header missing or invalid"}), 401
     if content_type != "application/json":
-        print("Invalid Content-Type")
+        print(f"⚠️ Warning: Invalid Content-Type: {content_type}")
         return jsonify({"error": "Content-Type must be application/json"}), 400
 
     print("Extracting JSON data from request")
@@ -97,7 +98,7 @@ def chat_user():
     user_profile = data.get("user_profile", "").strip()
     user_last_chat_history = data.get("user_last_chat_history", "").strip()
 
-    # Logging missing parameters
+    # Handle missing values
     if not query:
         print("⚠️ Warning: 'query' is missing or empty.")
     if not aname:
@@ -120,6 +121,13 @@ def chat_user():
             user_profile=user_profile
         )
 
+        # Ensure the response is not double-encoded
+        if isinstance(answer, str):
+            try:
+                answer = json.loads(answer)  # If it's a double-encoded string, convert it
+            except json.JSONDecodeError:
+                pass  # If it's already a valid string, keep it as is
+
         print(f"analyze_query returned: {answer}")
         return jsonify({"response": answer}), 200
     except Exception as e:
@@ -128,18 +136,27 @@ def chat_user():
 
 
 
+
 @app.route('/update_user_profile', methods=['POST'])
 def update_user_profile():
+    print("Validating headers")
+    content_type = request.headers.get("Content-Type")
+
+    if content_type != "application/json":
+        logging.warning(f"⚠️ Warning: Invalid Content-Type: {content_type}")
+        return jsonify({"error": "Content-Type must be application/json"}), 400
+
     data = request.get_json(silent=True)
 
     if not isinstance(data, dict):
-        logging.error(f"Invalid JSON format received: {data}")
-        return jsonify({"error": "Invalid JSON format, expected a dictionary"}), 400
+        logging.error("❌ Error: No JSON payload received. Logging request headers for debugging:")
+        logging.error(f"Headers: {dict(request.headers)}")
+        return jsonify({"error": "Invalid or missing JSON payload"}), 400
 
     query = data.get("query", "").strip()
     user_profile = data.get("user_profile", "").strip()
 
-    # Log and handle missing values
+    # Log missing values
     if not query:
         logging.warning("⚠️ Warning: 'query' is missing or empty.")
     if not user_profile or user_profile.lower() == "undefined":
@@ -148,18 +165,43 @@ def update_user_profile():
 
     try:
         ai_interface = AIInterface()
-        updated_profile = ai_interface.update_user_profile(query, user_profile)
 
-        # Convert updated profile back to JSON string before returning
-        updated_profile_str = json.dumps(updated_profile, ensure_ascii=False)
+        # Retry mechanism for empty responses
+        max_retries = 3
+        attempt = 0
+        updated_profile = None
 
-        # Log updated user profile
-        logging.info(f"✅ Updated User Profile: {updated_profile_str}")
+        while attempt < max_retries:
+            raw_response = ai_interface.update_user_profile(query, user_profile)
 
-        return jsonify({"updated_user_profile": updated_profile_str}), 200
+            # Log the raw AI response
+            logging.info(f"🧠 Raw AI Response (Attempt {attempt + 1}): {raw_response}")
+
+            if isinstance(raw_response, str) and raw_response.strip():
+                try:
+                    updated_profile = json.loads(raw_response)  # Convert JSON string to a dictionary
+                    if updated_profile:  # Ensure it's not empty
+                        break  # Exit retry loop if response is valid
+                except json.JSONDecodeError:
+                    logging.error(f"❌ Error decoding AI response: {raw_response}")
+
+            attempt += 1
+            time.sleep(1)  # Add delay before retrying
+
+        # If OpenAI fails after 3 retries, return the original user profile
+        if not updated_profile:
+            logging.warning("⚠️ OpenAI response was empty after 3 attempts. Returning original user profile.")
+            updated_profile = json.loads(user_profile)  # Convert user_profile back to dictionary
+
+        # Log final updated user profile
+        logging.info(f"✅ Final Updated User Profile: {json.dumps(updated_profile, ensure_ascii=False)}")
+
+        return jsonify({"updated_user_profile": updated_profile}), 200
     except Exception as e:
         logging.error(f"Error in /update_user_profile endpoint: {e}")
         return jsonify({"error": str(e)}), 500
+
+
 
 
 
