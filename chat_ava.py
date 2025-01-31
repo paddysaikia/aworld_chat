@@ -180,8 +180,8 @@ def update_user_profile():
                     updated_profile = json.loads(raw_response)  # Convert JSON string to a dictionary
                     if updated_profile:  # Ensure it's not empty
                         break  # Exit retry loop if response is valid
-                except json.JSONDecodeError:
-                    logging.error(f"❌ Error decoding AI response: {raw_response}")
+                except json.JSONDecodeError as e:
+                    logging.error(f"❌ Error decoding AI response (Attempt {attempt + 1}): {e}")
 
             attempt += 1
             time.sleep(1)  # Add delay before retrying
@@ -192,7 +192,7 @@ def update_user_profile():
             updated_profile = json.loads(user_profile)  # Convert user_profile back to dictionary
 
         # Convert updated profile to text format
-        text_profile = convert_json_to_text(updated_profile)
+        text_profile = convert_json_to_text(updated_profile)  # ✅ Now correctly calling the function
 
         # Log final updated user profile
         logging.info(f"✅ Final Updated User Profile (Text Format): {text_profile}")
@@ -207,18 +207,25 @@ def convert_json_to_text(user_profile_json):
     Convert a JSON user profile to a text-based format.
     """
     try:
-        # Load JSON if it's a string
+        # Ensure user_profile_json is a dictionary
         if isinstance(user_profile_json, str):
-            user_profile = json.loads(user_profile_json)
+            if user_profile_json.strip():  # Ensure it's not empty
+                user_profile = json.loads(user_profile_json)
+            else:
+                user_profile = {}
         else:
             user_profile = user_profile_json
 
         # Convert dictionary to a formatted text string
         text_profile = "\n".join([f"{key.replace('_', ' ').title()}: {value}" for key, value in user_profile.items()])
 
-        return text_profile
+        return text_profile if text_profile.strip() else "No user profile available."
+    
+    except json.JSONDecodeError as e:
+        logging.error(f"❌ JSONDecodeError in convert_json_to_text: {e}")
+        return "Error formatting profile."
     except Exception as e:
-        logging.error(f"❌ Error converting user profile to text: {e}")
+        logging.error(f"❌ Unexpected error in convert_json_to_text: {e}")
         return "Error formatting profile."
 
 
