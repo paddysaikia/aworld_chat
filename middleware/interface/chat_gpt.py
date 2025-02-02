@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify, render_template
 from openai import OpenAI
 import os
+import json
+import logging
 import time
 
 class ChatGPTClient:

@@ -6,11 +6,10 @@ import json
 import time
 
 from dotenv import load_dotenv
-from openai import OpenAI
-from middleware.interface import chat_gpt
 
 from util.util_ava.query_analysis import QueryAnalyzer
 from util.util_ava.util_interface import AIInterface
+from util.util_ava.util_user_profile import UserProfiler
 
 # Load environment variables from .env file
 load_dotenv()
@@ -138,90 +137,97 @@ def chat_user():
 
 @app.route('/update_user_profile', methods=['POST'])
 def update_user_profile():
-    print("Validating headers")
+    logging.info("📌 [START] Processing /update_user_profile request")
     content_type = request.headers.get("Content-Type")
 
-    if content_type != "application/json":
-        logging.warning(f"⚠️ Warning: Invalid Content-Type: {content_type}")
+    # Validate Content-Type header
+    if not content_type or "application/json" not in content_type:
+        logging.warning(f"⚠️ Invalid Content-Type: {content_type}")
         return jsonify({"error": "Content-Type must be application/json"}), 400
 
-    data = request.get_json(silent=True)
-
-    if not isinstance(data, dict):
-        logging.error("❌ Error: No JSON payload received. Logging request headers for debugging:")
-        logging.error(f"Headers: {dict(request.headers)}")
-        return jsonify({"error": "Invalid or missing JSON payload"}), 400
-
-    query = data.get("query", "").strip()
-    user_profile_str = data.get("user_profile", "").strip()
-
-    # Log missing values
-    if not query:
-        logging.warning("⚠️ Warning: 'query' is missing or empty.")
-
-    if not user_profile_str or user_profile_str.lower() == "undefined":
-        logging.warning("⚠️ Warning: 'user_profile' is missing or invalid, defaulting to '{}'.")
-        user_profile_dict = {}  # Default to an empty dictionary
-    else:
-        try:
-            # **Parse the text-based profile into a dictionary**
-            user_profile_dict = {}
-            for entry in user_profile_str.split(","):
-                key_value = entry.split(":", 1)  # Split only at the first ":"
-                if len(key_value) == 2:
-                    key, value = key_value
-                    user_profile_dict[key.strip()] = value.strip()
-
-            logging.info(f"✅ Parsed User Profile: {user_profile_dict}")
-
-        except Exception as e:
-            logging.error(f"❌ Error parsing 'user_profile': {user_profile_str}")
-            user_profile_dict = {}  # Default to an empty dictionary
-
     try:
-        ai_interface = AIInterface()
+        # Validate and extract JSON payload
+        data = request.get_json()
+        if not isinstance(data, dict):
+            raise ValueError("Invalid JSON payload: expected a dictionary.")
 
-        # Retry mechanism for empty responses
+        # Extract required parameters
+        query = data.get("query", "").strip()
+        user_profile = data.get("user_profile", "").strip()
+
+        if not query:
+            return jsonify({"error": "Query parameter is required"}), 400
+
+        if not user_profile:
+            logging.warning("⚠️ User profile is missing or invalid, defaulting to an empty string.")
+            user_profile = ""
+
+        logging.info("🧠 Initializing OpenAI client")
+        user_profiler = UserProfiler()
+
         max_retries = 3
         attempt = 0
         updated_profile = None
 
         while attempt < max_retries:
-            raw_response = ai_interface.update_user_profile(query, json.dumps(user_profile_dict))
+            try:
+                user_profile_str = user_profile
+                parsed_profile = parse_custom_response(user_profile.strip())
+                # print("parsed profile",parsed_profile)
+                # print("parsed profile type",type(parsed_profile))
+                if isinstance(parsed_profile, dict):
+                    logging.info("✅ Successfully parsed user profile.")
+                    user_profile = parsed_profile
+                else:
+                    logging.warning(f"⚠️ User profile is not a dictionary: {parsed_profile}")
 
-            # Log the raw AI response
-            logging.info(f"🧠 Raw AI Response (Attempt {attempt + 1}): {raw_response}")
+                logging.info(f"🔄 Attempt {attempt + 1}: Sending request to OpenAI")
+                raw_response = user_profiler.update_user_profile(query, user_profile, user_profile_str)
 
-            if raw_response and raw_response.strip():
+                if not raw_response.strip():
+                    logging.warning("⚠️ OpenAI returned an empty response.")
+                if not raw_response or not raw_response.strip():
+                    logging.warning("⚠️ OpenAI returned an empty response.")
+                    attempt += 1
+                    if attempt >= max_retries:
+                        break
+                    time.sleep(2 ** attempt)  # Exponential backoff
+                    continue
                 try:
-                    updated_profile = json.loads(raw_response)  # Convert JSON string to a dictionary
-                    if isinstance(updated_profile, dict) and updated_profile:  # Ensure it's valid
-                        break  # Exit retry loop if response is valid
-                except json.JSONDecodeError as e:
-                    logging.error(f"❌ Error decoding AI response: {raw_response}")
-            else:
-                logging.warning(f"⚠️ OpenAI returned an empty response on attempt {attempt + 1}")
+                    parsed_response = json.loads(raw_response.strip())
+                except json.JSONDecodeError:
+                    logging.warning("⚠️ OpenAI response is not valid JSON. Attempting custom parsing.")
+                    parsed_response = parse_custom_response(raw_response.strip())
 
-            attempt += 1
-            time.sleep(1)  # Add delay before retrying
+                if isinstance(parsed_response, dict):
+                    logging.info("✅ Successfully parsed OpenAI response.")
+                    updated_profile = parsed_response
+                    break
+                else:
+                    logging.warning(f"⚠️ OpenAI response is not a dictionary: {parsed_response}")
 
-        # If OpenAI fails after 3 retries, return the original user profile
-        if not updated_profile:
-            logging.warning("⚠️ OpenAI response was empty after 3 attempts. Returning original user profile.")
-            updated_profile = user_profile_dict  # Use parsed original profile
+            except Exception as e:
+                attempt += 1
+                logging.error(f"🚨 Error processing OpenAI response: {str(e)}")
+                if attempt >= max_retries:
+                    break
+                time.sleep(2 ** attempt)  # Exponential backoff
 
-        # Convert the JSON profile to text
-        user_profile_text = convert_json_to_text(updated_profile)
+        if not isinstance(updated_profile, dict):
+            logging.warning("⚠️ OpenAI response was empty or invalid after 3 attempts. Returning original user profile.")
+            updated_profile = {"user_profile": user_profile}
 
-        # Log final updated user profile
-        logging.info(f"✅ Final Updated User Profile:\n{user_profile_text}")
+        # Ensure the updated profile is formatted correctly
+        user_profile_text = updated_profile.get("user_profile", user_profile)
 
+        logging.info(f"✅ Final Updated User Profile: {user_profile_text}")
+        user_profile_text = convert_json_to_text(updated_profile.get("user_profile", user_profile))
+        logging.info("📌 [END] Successfully processed /update_user_profile request")
         return jsonify({"updated_user_profile": user_profile_text}), 200
+
     except Exception as e:
-        logging.error(f"Error in /update_user_profile endpoint: {e}")
+        logging.error(f"🚨 Critical Error in /update_user_profile: {str(e)}")
         return jsonify({"error": str(e)}), 500
-
-
 
 
 def convert_json_to_text(user_profile_json):
@@ -234,14 +240,23 @@ def convert_json_to_text(user_profile_json):
             logging.warning("⚠️ Warning: Received empty or invalid user profile dictionary. Returning default message.")
             return "User profile is currently empty or unavailable."
         
-        return ",,,".join([f"{key.capitalize()}: {value}" for key, value in user_profile_json.items()])
+        return ";".join([f"{key.capitalize()}: {value}".replace('"', '').replace('{', '').replace('}', '') for key, value in user_profile_json.items()])
     
     except Exception as e:
         logging.error(f"❌ Error in convert_json_to_text: {e}")
         return "Error formatting profile."
 
 
-
+def parse_custom_response(response):
+    """
+    Parses a custom delimited response string into a dictionary.
+    """
+    try:
+        # Split the response by semicolons and then by colons to create key-value pairs
+        return dict(item.split(":") for item in response.split(";"))
+    except Exception as e:
+        logging.error(f"🚨 Error parsing custom response: {str(e)}")
+        return {}
 
 @app.before_request
 def log_request_info():
