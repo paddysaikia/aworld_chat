@@ -1,5 +1,6 @@
 import os
 import logging
+import json
 
 class QueryAnalyzer:
     def __init__(self, ai_interface):
@@ -125,3 +126,5 @@ class QueryAnalyzer:
             return "The AI system did not provide a valid response."
 
         return final_response.get("response", "No answer available.")
+
+
