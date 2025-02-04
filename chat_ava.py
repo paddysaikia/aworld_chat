@@ -165,34 +165,23 @@ def update_user_profile():
         logging.info("🧠 Initializing OpenAI client")
         user_profiler = UserProfiler()
 
-        max_retries = 3
         attempt = 0
+        max_retries = 3
         updated_profile = None
 
         while attempt < max_retries:
             try:
-                user_profile_str = user_profile
-                parsed_profile = parse_custom_response(user_profile.strip())
-                # print("parsed profile",parsed_profile)
-                # print("parsed profile type",type(parsed_profile))
-                if isinstance(parsed_profile, dict):
-                    logging.info("✅ Successfully parsed user profile.")
-                    user_profile = parsed_profile
-                else:
-                    logging.warning(f"⚠️ User profile is not a dictionary: {parsed_profile}")
-
                 logging.info(f"🔄 Attempt {attempt + 1}: Sending request to OpenAI")
-                raw_response = user_profiler.update_user_profile(query, user_profile, user_profile_str)
+                raw_response = user_profiler.update_user_profile(query, user_profile, data.get("user_profile", ""))
 
                 if not raw_response.strip():
-                    logging.warning("⚠️ OpenAI returned an empty response.")
-                if not raw_response or not raw_response.strip():
                     logging.warning("⚠️ OpenAI returned an empty response.")
                     attempt += 1
                     if attempt >= max_retries:
                         break
                     time.sleep(2 ** attempt)  # Exponential backoff
                     continue
+
                 try:
                     parsed_response = json.loads(raw_response.strip())
                 except json.JSONDecodeError:
@@ -207,8 +196,8 @@ def update_user_profile():
                     logging.warning(f"⚠️ OpenAI response is not a dictionary: {parsed_response}")
 
             except Exception as e:
-                attempt += 1
                 logging.error(f"🚨 Error processing OpenAI response: {str(e)}")
+                attempt += 1
                 if attempt >= max_retries:
                     break
                 time.sleep(2 ** attempt)  # Exponential backoff
@@ -217,18 +206,15 @@ def update_user_profile():
             logging.warning("⚠️ OpenAI response was empty or invalid after 3 attempts. Returning original user profile.")
             updated_profile = {"user_profile": user_profile}
 
-        # Ensure the updated profile is formatted correctly
-        user_profile_text = updated_profile.get("user_profile", user_profile)
-
-        logging.info(f"✅ Final Updated User Profile: {user_profile_text}")
-        user_profile_text = convert_json_to_text(updated_profile.get("user_profile", user_profile))
+        updated_profile_str = convert_dict_to_string(updated_profile)
+        updated_profile_str = data.get("user_profile", "")+";"+updated_profile_str
+        logging.info(f"✅ Final Updated User Profile: {updated_profile_str}")
         logging.info("📌 [END] Successfully processed /update_user_profile request")
-        return jsonify({"updated_user_profile": user_profile_text}), 200
+        return jsonify({"updated_user_profile": updated_profile_str}), 200
 
     except Exception as e:
         logging.error(f"🚨 Critical Error in /update_user_profile: {str(e)}")
         return jsonify({"error": str(e)}), 500
-
 
 def convert_json_to_text(user_profile_json):
     """
@@ -245,6 +231,38 @@ def convert_json_to_text(user_profile_json):
     except Exception as e:
         logging.error(f"❌ Error in convert_json_to_text: {e}")
         return "Error formatting profile."
+    
+def convert_dict_to_string(dictionary):
+    """
+    Converts a dictionary to a human-readable string format.
+    If the dictionary is empty or invalid, returns a default message.
+    """
+    try:
+        if not dictionary or not isinstance(dictionary, dict):
+            logging.warning("⚠️ Warning: Received empty or invalid dictionary. Returning default message.")
+            return "Dictionary is currently empty or unavailable."
+        
+        return ";".join([f"{key}:{value}" for key, value in dictionary.items()])
+    
+    except Exception as e:
+        logging.error(f"❌ Error in convert_dict_to_string: {e}")
+        return "Error formatting dictionary."
+
+def convert_json_to_string(user_profile_json):
+    """
+    Converts a user profile JSON dictionary to a JSON string.
+    If the JSON is empty or invalid, returns an empty JSON object string.
+    """
+    try:
+        if not user_profile_json or not isinstance(user_profile_json, dict):
+            logging.warning("⚠️ Warning: Received empty or invalid user profile dictionary. Returning empty JSON object string.")
+            return "{}"
+        
+        return json.dumps(user_profile_json)
+    
+    except Exception as e:
+        logging.error(f"❌ Error in convert_json_to_string: {e}")
+        return "{}"
 
 
 def parse_custom_response(response):
